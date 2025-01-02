@@ -9,13 +9,15 @@ import SwiftUI
 import Charts
 
 struct DetailsView: View {
-    
     enum Constants {
         static let low = (min: 20.0, max: 200.0, step: 20.0)
         static let mid = (min: 200.0, max: 2_000.0, step: 200.0)
         static let high = (min: 2_000.0, max: 20_000.0, step: 2_000.0)
     }
     
+    @State private var selectedPoint: FrequencyResponsePoint?
+    @State private var interactionLocation: CGPoint = .zero
+
     let speaker: Speaker
 
     var body: some View {
@@ -24,56 +26,77 @@ struct DetailsView: View {
                 Text(speaker.description)
                 Text("Resonance Frequency: \(speaker.resonanceFrequency)")
                 Text("Sensitivity: \(speaker.sensitivity)")
+                Text("Selected Hz: \(Int(selectedPoint?.frequency ?? 0)), dB: \(Int(selectedPoint?.spl ?? 0))")
+                    .font(.title)
+                    .padding(5)
+                    .background(Color.white.opacity(0.8))
             }
             .font(.body)
             .padding()
-            Chart(speaker.frequesncyResponse) { point in
-                LineMark(
-                    x: .value("Frequency (Hz)", normalizeFrequency(point.frequency)),
-                    y: .value("Sound Pressure (dB)", point.spl)
-                )
-                .interpolationMethod(.catmullRom)
-                .foregroundStyle(
-                    LinearGradient(
-                        gradient: Gradient(colors: [.teal]),
-                        startPoint: .leading,
-                        endPoint: .trailing
+            GeometryReader { geometry in
+                Chart(speaker.frequesncyResponse) { point in
+                    LineMark(
+                        x: .value("Frequency (Hz)", normalizeFrequency(point.frequency)),
+                        y: .value("Sound Pressure (dB)", point.spl)
                     )
-                )
-                
-                PointMark(
-                    x: .value("Frequency (Hz)", normalizeFrequency(point.frequency)),
-                    y: .value("Sound Pressure (dB)", point.spl)
-                )
-                .foregroundStyle(.blue)
-                .symbolSize(15)
-            }
-            .chartXScale(domain: 0...3.2)
-            .chartYScale(domain: 50...110)
-            .chartXAxis {
-                AxisMarks(values: generateLogarithmicXAxis()) { value in
-                    AxisValueLabel {
-                        if let doubleValue = value.as(Double.self) {
-                            Text(denormalizeFrequency(doubleValue))
+                    .interpolationMethod(.catmullRom)
+                    .foregroundStyle(
+                        LinearGradient(
+                            gradient: Gradient(colors: [.teal]),
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    
+                    PointMark(
+                        x: .value("Frequency (Hz)", normalizeFrequency(point.frequency)),
+                        y: .value("Sound Pressure (dB)", point.spl)
+                    )
+                    .foregroundStyle(.blue)
+                    .symbolSize(15)
+                }
+                .chartXScale(domain: 0...3.2)
+                .chartYScale(domain: 50...110)
+                .chartXAxis {
+                    AxisMarks(values: generateLogarithmicXAxis()) { value in
+                        AxisValueLabel {
+                            if let doubleValue = value.as(Double.self) {
+                                Text(denormalizeFrequency(doubleValue))
+                            }
                         }
+                        .foregroundStyle(.black)
+                        AxisGridLine()
+                            .foregroundStyle(.gray)
+                        AxisTick()
                     }
-                    .foregroundStyle(.black)
-                    AxisGridLine()
-                        .foregroundStyle(.gray)
-                    AxisTick()
+                }
+                .chartYAxis() {
+                    AxisMarks(position: .leading, values: .stride(by: 10)) {
+                        AxisValueLabel()
+                            .foregroundStyle(.black)
+                        AxisGridLine()
+                            .foregroundStyle(.black)
+                        AxisTick()
+                    }
+                }
+                .chartXAxisLabel("Frequency (Hz)", position: .bottom)
+                .chartYAxisLabel("Sound Pressure (dB)", position: .leading)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            interactionLocation = value.location
+                            if let closestPoint = findClosestPoint(to: interactionLocation.x, in: speaker.frequesncyResponse, chartSize: geometry.size) {
+                                selectedPoint = closestPoint
+                            }
+                        }
+                )
+                .onTapGesture { location in
+                    interactionLocation = location
+                    if let closestPoint = findClosestPoint(to: interactionLocation.x, in: speaker.frequesncyResponse, chartSize: geometry.size) {
+                        selectedPoint = closestPoint
+                    }
                 }
             }
-            .chartYAxis() {
-                AxisMarks(position: .leading, values: .stride(by: 10)) {
-                    AxisValueLabel()
-                        .foregroundStyle(.black)
-                    AxisGridLine()
-                        .foregroundStyle(.black)
-                    AxisTick()
-                }
-            }
-            .chartXAxisLabel("Frequency (Hz)", position: .bottom)
-            .chartYAxisLabel("Sound Pressure (dB)", position: .leading)
             .padding()
         }
         .navigationTitle(speaker.name)
@@ -81,7 +104,13 @@ struct DetailsView: View {
     }
 
     // MARK: - Helper Functions
-
+    
+    private func findClosestPoint(to x: CGFloat, in points: [FrequencyResponsePoint], chartSize: CGSize) -> FrequencyResponsePoint? {
+        let normalizedX = (x / chartSize.width) * (20_000 - 20) + 20
+        let closest = points.min(by: { abs($0.frequency - normalizedX) < abs($1.frequency - normalizedX) })
+        return closest
+    }
+    
     private func normalizeFrequency(_ frequency: Double) -> Double {
         func logNormalize(_ value: Double, range: (min: Double, max: Double), offset: Double) -> Double {
             return offset + (log10(value) - log10(range.min)) / (log10(range.max) - log10(range.min))
