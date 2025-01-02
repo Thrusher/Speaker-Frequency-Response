@@ -34,7 +34,7 @@ struct Speaker: Hashable, Equatable, Identifiable {
     let name: String
     let resonanceFrequency: Int
     let sensitivity: Int
-    let description: String // Added for additional information
+    let description: String
     let frequesncyResponse: [FrequencyResponsePoint]
     
     init(name: String,
@@ -67,40 +67,6 @@ struct Speaker: Hashable, Equatable, Identifiable {
 }
 
 extension Speaker {
-    private static func generateSpeakerFrequencyResponse(
-        name: String,
-        resonanceFrequency: Int,
-        sensitivity: Int,
-        description: String,
-        baseCurve: [(Double, Double)]
-    ) -> Speaker {
-        let lowRange = stride(from: 20.0, through: 200.0, by: 10.0)
-        let midRange = stride(from: 200.0, through: 2000.0, by: 70.0)
-        let highRange = stride(from: 2000.0, through: 20_000.0, by: 800.0)
-
-        let interpolatedCurve = (Array(lowRange) + Array(midRange) + Array(highRange)).map { frequency in
-            let matchingPoints = baseCurve.filter { $0.0 <= frequency }
-            guard let lastPoint = matchingPoints.last, let nextPoint = baseCurve.first(where: { $0.0 > frequency }) else {
-                return FrequencyResponsePoint(frequency: frequency, spl: matchingPoints.last?.1 ?? 80)
-            }
-            let slope = (nextPoint.1 - lastPoint.1) / (nextPoint.0 - lastPoint.0)
-            let spl = lastPoint.1 + slope * (frequency - lastPoint.0)
-            return FrequencyResponsePoint(frequency: frequency, spl: spl + generateRandomness())
-        }
-
-        return Speaker(
-            name: name,
-            resonanceFrequency: resonanceFrequency,
-            sensitivity: sensitivity,
-            description: description,
-            frequesncyResponse: interpolatedCurve
-        )
-    }
-
-    private static func generateRandomness() -> Double {
-        Double.random(in: -0.5...0.5)
-    }
-
     static let mockSpeakers: [Speaker] = [
         generateSpeakerFrequencyResponse(
             name: "A-Type",
@@ -163,4 +129,38 @@ extension Speaker {
             ]
         )
     ]
+    
+    private static func generateSpeakerFrequencyResponse(
+        name: String,
+        resonanceFrequency: Int,
+        sensitivity: Int,
+        description: String,
+        baseCurve: [(Double, Double)]
+    ) -> Speaker {
+        let lowRange = stride(from: 20.0, through: 200.0, by: 10.0)
+        let midRange = stride(from: 200.0, through: 2000.0, by: 70.0)
+        let highRange = stride(from: 2000.0, through: 20_000.0, by: 800.0)
+
+        let interpolatedCurve = (Array(lowRange) + Array(midRange) + Array(highRange)).map { frequency in
+            let matchingPoints = baseCurve.filter { $0.0 <= frequency }
+            guard let lastPoint = matchingPoints.last, let nextPoint = baseCurve.first(where: { $0.0 > frequency }) else {
+                return FrequencyResponsePoint(frequency: frequency, spl: matchingPoints.last?.1 ?? 80)
+            }
+            let slope = (nextPoint.1 - lastPoint.1) / (nextPoint.0 - lastPoint.0)
+            let spl = lastPoint.1 + slope * (frequency - lastPoint.0)
+            return FrequencyResponsePoint(frequency: frequency, spl: spl + generateRandomness())
+        }
+
+        return Speaker(
+            name: name,
+            resonanceFrequency: resonanceFrequency,
+            sensitivity: sensitivity,
+            description: description,
+            frequesncyResponse: interpolatedCurve
+        )
+    }
+
+    private static func generateRandomness() -> Double {
+        Double.random(in: -0.5...0.5)
+    }
 }
