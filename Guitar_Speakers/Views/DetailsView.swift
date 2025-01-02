@@ -108,10 +108,7 @@ struct DetailsView: View {
     // MARK: - Helper Functions
     
     private func updateSelectedPoint(from location: CGPoint, chartSize: CGSize) {
-        // Normalize x-coordinate to chart's domain (0...3.2)
         let normalizedX = (location.x / chartSize.width) * 3.2
-
-        // Map normalizedX back to frequency
         let frequency: Double
         if normalizedX <= 1.0 {
             frequency = pow(10, log10(Constants.low.min) + normalizedX * (log10(Constants.low.max) - log10(Constants.low.min)))
@@ -123,10 +120,23 @@ struct DetailsView: View {
             frequency = pow(10, log10(Constants.high.min) + offsetX * (log10(Constants.high.max) - log10(Constants.high.min)))
         }
 
-        // Find the closest point in the data
-        if let closestPoint = speaker.frequesncyResponse.min(by: { abs($0.frequency - frequency) < abs($1.frequency - frequency) }) {
-            selectedPoint = closestPoint
+        guard let lowerPoint = speaker.frequesncyResponse.last(where: { $0.frequency <= frequency }),
+              let upperPoint = speaker.frequesncyResponse.first(where: { $0.frequency > frequency }) else {
+            return
         }
+
+        if lowerPoint.frequency == frequency {
+            selectedPoint = lowerPoint
+            return
+        } else if upperPoint.frequency == frequency {
+            selectedPoint = upperPoint
+            return
+        }
+
+        let slope = (upperPoint.spl - lowerPoint.spl) / (upperPoint.frequency - lowerPoint.frequency)
+        let interpolatedSPL = lowerPoint.spl + slope * (frequency - lowerPoint.frequency)
+
+        selectedPoint = FrequencyResponsePoint(frequency: frequency, spl: interpolatedSPL)
     }
     
     private func findClosestPoint(to x: CGFloat, in points: [FrequencyResponsePoint], chartSize: CGSize) -> FrequencyResponsePoint? {
