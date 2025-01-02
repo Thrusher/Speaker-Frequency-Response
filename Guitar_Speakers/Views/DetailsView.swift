@@ -32,10 +32,24 @@ struct DetailsView: View {
                     x: .value("Frequency (Hz)", normalizeFrequency(point.frequency)),
                     y: .value("Sound Pressure (dB)", point.spl)
                 )
-                .foregroundStyle(.red)
+                .interpolationMethod(.catmullRom)
+                .foregroundStyle(
+                    LinearGradient(
+                        gradient: Gradient(colors: [.teal]),
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                
+                PointMark(
+                    x: .value("Frequency (Hz)", normalizeFrequency(point.frequency)),
+                    y: .value("Sound Pressure (dB)", point.spl)
+                )
+                .foregroundStyle(.blue)
+                .symbolSize(15)
             }
-            .padding()
             .chartXScale(domain: 0...3.2)
+            .chartYScale(domain: 50...110)
             .chartXAxis {
                 AxisMarks(values: generateLogarithmicXAxis()) { value in
                     AxisValueLabel {
@@ -45,11 +59,10 @@ struct DetailsView: View {
                     }
                     .foregroundStyle(.black)
                     AxisGridLine()
-                        .foregroundStyle(.black)
+                        .foregroundStyle(.gray)
                     AxisTick()
                 }
             }
-            .chartYScale(domain: 50...110) // Standard scale for Y-axis
             .chartYAxis() {
                 AxisMarks(position: .leading, values: .stride(by: 10)) {
                     AxisValueLabel()
@@ -59,6 +72,9 @@ struct DetailsView: View {
                     AxisTick()
                 }
             }
+            .chartXAxisLabel("Frequency (Hz)", position: .bottom)
+            .chartYAxisLabel("Sound Pressure (dB)", position: .leading)
+            .padding()
         }
         .navigationTitle(speaker.name)
         .navigationBarTitleDisplayMode(.inline)

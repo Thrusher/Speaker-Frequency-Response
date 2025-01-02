@@ -75,8 +75,8 @@ extension Speaker {
         baseCurve: [(Double, Double)]
     ) -> Speaker {
         let lowRange = stride(from: 20.0, through: 200.0, by: 10.0)
-        let midRange = stride(from: 200.0, through: 2000.0, by: 20.0)
-        let highRange = stride(from: 2000.0, through: 20_000.0, by: 500.0)
+        let midRange = stride(from: 200.0, through: 2000.0, by: 70.0)
+        let highRange = stride(from: 2000.0, through: 20_000.0, by: 800.0)
 
         let interpolatedCurve = (Array(lowRange) + Array(midRange) + Array(highRange)).map { frequency in
             let matchingPoints = baseCurve.filter { $0.0 <= frequency }
