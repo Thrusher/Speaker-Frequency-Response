@@ -1,0 +1,1 @@
+# Speaker frequency response
